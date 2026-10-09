@@ -1,0 +1,54 @@
+name: branchframe
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: branchframe
+      POSTGRES_USER: branchframe
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-branchframe}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5436}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U branchframe -d branchframe"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+  api:
+    build: .
+    ports:
+      - "127.0.0.1:${PORT:-8000}:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg://branchframe:${POSTGRES_PASSWORD:-branchframe}@db:5432/branchframe
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:5173}
+      AUTH_MODE: demo
+      DEMO_MODE: ${DEMO_MODE:-true}
+      AI_MODE: ${AI_MODE:-mock}
+      AI_BASE_URL: ${AI_BASE_URL:-}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-}
+      AI_PROVIDER_NAME: ${AI_PROVIDER_NAME:-router}
+      AI_TIMEOUT_SECONDS: ${AI_TIMEOUT_SECONDS:-60}
+      AI_MAX_OUTPUT_TOKENS: ${AI_MAX_OUTPUT_TOKENS:-6000}
+      AI_JSON_MODE: ${AI_JSON_MODE:-true}
+      AI_IMAGE_ANALYSIS_ENABLED: ${AI_IMAGE_ANALYSIS_ENABLED:-false}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-}
+      AI_MAX_ASSETS_PER_ASSESSMENT: ${AI_MAX_ASSETS_PER_ASSESSMENT:-20}
+      AI_MONTHLY_BUDGET_LIMIT_USD: ${AI_MONTHLY_BUDGET_LIMIT_USD:-}
+      API_PUBLIC_BASE_URL: ${API_PUBLIC_BASE_URL:-http://localhost:8000}
+      STORAGE_LOCAL_DIR: /app/.data/uploads
+    volumes:
+      - uploads:/app/.data/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+volumes:
+  postgres_data:
+  uploads:
